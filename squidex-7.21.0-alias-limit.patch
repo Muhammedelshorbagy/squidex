@@ -1,5 +1,5 @@
 diff --git a/backend/src/Squidex.Domain.Apps.Entities/Contents/GraphQL/GraphQLOptions.cs b/backend/src/Squidex.Domain.Apps.Entities/Contents/GraphQL/GraphQLOptions.cs
-index 85f2d888b..b95991258 100644
+index 85f2d88..b959912 100644
 --- a/backend/src/Squidex.Domain.Apps.Entities/Contents/GraphQL/GraphQLOptions.cs
 +++ b/backend/src/Squidex.Domain.Apps.Entities/Contents/GraphQL/GraphQLOptions.cs
 @@ -14,4 +14,8 @@ public sealed class GraphQLOptions
@@ -13,7 +13,7 @@ index 85f2d888b..b95991258 100644
  }
 diff --git a/backend/src/Squidex/Config/Web/AliasLimitValidationRule.cs b/backend/src/Squidex/Config/Web/AliasLimitValidationRule.cs
 new file mode 100644
-index 000000000..dc7fbb742
+index 0000000..dc7fbb7
 --- /dev/null
 +++ b/backend/src/Squidex/Config/Web/AliasLimitValidationRule.cs
 @@ -0,0 +1,47 @@
@@ -65,7 +65,7 @@ index 000000000..dc7fbb742
 +    }
 +}
 diff --git a/backend/src/Squidex/Config/Web/WebServices.cs b/backend/src/Squidex/Config/Web/WebServices.cs
-index 748013a9d..85f7b1e9c 100644
+index 748013a..74610e4 100644
 --- a/backend/src/Squidex/Config/Web/WebServices.cs
 +++ b/backend/src/Squidex/Config/Web/WebServices.cs
 @@ -136,7 +136,13 @@ public static class WebServices
@@ -75,7 +75,7 @@ index 748013a9d..85f7b1e9c 100644
 -            builder.UseApolloTracing();
 +            // Tracing measures every single field resolution and is therefore not enabled by default.
 +            builder.UseApolloTracing(options =>
-+                options.RequestServicesOrThrow().GetRequiredService<IOptions<GraphQLOptions>>().Value.EnableTracing);
++                options.RequestServices?.GetService<IOptions<GraphQLOptions>>()?.Value.EnableTracing == true);
 +
 +            // Rejects queries with too many aliases (graphql:maxAliases, 0 = disabled).
 +            builder.AddValidationRule<AliasLimitValidationRule>();
