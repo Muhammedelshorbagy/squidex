@@ -1,13 +1,19 @@
-# Squidex 7.21.0 alias-limit build kit
+# Squidex alias-limit build kit (base: commit 223687424, 2026-01-20)
 
-1. Create a new PRIVATE repository on github.com and upload everything in this folder
-   (including the hidden .github folder) to its main branch.
-2. Open the repo's Actions tab -> "build-squidex-alias-limit" -> Run workflow.
-3. When it finishes, download the "squidex-dlls" artifact (2 DLLs).
+Your install is NOT the official 7.21.0 tag: it is a newer snapshot of the main branch
+(still .NET 8) that is labelled 7.21.0. This kit builds from that snapshot's source.
 
-Deploy (on the server):
-- Stop the app pool, back up Squidex.dll and Squidex.Domain.Apps.Entities.dll in the site folder.
-- Copy the two new DLLs over them.
-- In appsettings.json, in the "graphQL" section, set:  "maxAliases": 20,  "enableTracing": false
-  (remove maxDepth / maxComplexity, they do nothing on 7.21.0)
-- Start the app pool, then rerun the 100-alias test: it must return a GraphQL error, not 200.
+1. Upload everything in this folder (including the hidden .github folder) to a private GitHub repo.
+2. Actions -> build-squidex-alias-limit -> Run workflow.
+3. Download the artifact "squidex-backend" and unzip it to C:\temp\out on the server.
+
+Deploy on the server (PowerShell as Administrator):
+
+  Stop-WebAppPool Squidex-test
+  Copy-Item C:\Host\Squidex-Test C:\Host\Squidex-Test-backup -Recurse     # FULL backup first
+  robocopy C:\temp\out C:\Host\Squidex-Test /E /XF appsettings*.json web.config /XD wwwroot Assets logs
+  # edit C:\Host\Squidex-Test\appsettings.json, section "graphQL": add  "maxAliases": 20,  "enableTracing": false
+  Start-WebAppPool Squidex-test
+
+Do not use /MIR (it would delete your Assets folder).
+Rollback: stop the pool, delete the site folder contents, copy the backup folder back, start the pool.
