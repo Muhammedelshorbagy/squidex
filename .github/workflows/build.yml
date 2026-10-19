@@ -10,7 +10,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: Squidex/squidex
-          ref: 223687424482a619acc2c98195fe1fb4295c6a22
+          ref: 476bb8f395bc38525ab02d65cffbdb111df7131a
           path: squidex
       - uses: actions/setup-dotnet@v4
         with:
