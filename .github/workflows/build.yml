@@ -1,0 +1,31 @@
+name: build-squidex-alias-limit
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: mine
+      - uses: actions/checkout@v4
+        with:
+          repository: Squidex/squidex
+          ref: 7.21.0
+          path: squidex
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Apply patch
+        working-directory: squidex
+        run: git apply ../mine/squidex-7.21.0-alias-limit.patch
+      - name: Publish
+        working-directory: squidex/backend
+        run: dotnet publish src/Squidex/Squidex.csproj -c Release -p:version=7.21.0 -o ../../out
+      - name: Show result
+        run: ls -l out/Squidex.dll out/Squidex.Domain.Apps.Entities.dll
+      - uses: actions/upload-artifact@v4
+        with:
+          name: squidex-dlls
+          path: |
+            out/Squidex.dll
+            out/Squidex.Domain.Apps.Entities.dll

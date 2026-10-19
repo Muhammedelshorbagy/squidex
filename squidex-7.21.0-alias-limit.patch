@@ -1,0 +1,85 @@
+diff --git a/backend/src/Squidex.Domain.Apps.Entities/Contents/GraphQL/GraphQLOptions.cs b/backend/src/Squidex.Domain.Apps.Entities/Contents/GraphQL/GraphQLOptions.cs
+index 85f2d888b..b95991258 100644
+--- a/backend/src/Squidex.Domain.Apps.Entities/Contents/GraphQL/GraphQLOptions.cs
++++ b/backend/src/Squidex.Domain.Apps.Entities/Contents/GraphQL/GraphQLOptions.cs
+@@ -14,4 +14,8 @@ public sealed class GraphQLOptions
+     public int DataLoaderBatchSize { get; set; } = 1000;
+ 
+     public bool EnableSubscriptions { get; set; } = true;
++
++    public int MaxAliases { get; set; }
++
++    public bool EnableTracing { get; set; }
+ }
+diff --git a/backend/src/Squidex/Config/Web/AliasLimitValidationRule.cs b/backend/src/Squidex/Config/Web/AliasLimitValidationRule.cs
+new file mode 100644
+index 000000000..dc7fbb742
+--- /dev/null
++++ b/backend/src/Squidex/Config/Web/AliasLimitValidationRule.cs
+@@ -0,0 +1,47 @@
++// ==========================================================================
++//  Squidex Headless CMS
++// ==========================================================================
++//  Copyright (c) Squidex UG (haftungsbeschraenkt)
++//  All rights reserved. Licensed under the MIT license.
++// ==========================================================================
++
++using GraphQL.Validation;
++using GraphQLParser.AST;
++using Microsoft.Extensions.Options;
++using Squidex.Domain.Apps.Entities.Contents.GraphQL;
++
++namespace Squidex.Config.Web;
++
++public sealed class AliasLimitValidationRule(IOptions<GraphQLOptions> options) : ValidationRuleBase
++{
++    private readonly int maxAliases = options.Value.MaxAliases;
++
++    public override ValueTask<INodeVisitor?> GetPreNodeVisitorAsync(ValidationContext context)
++    {
++        if (maxAliases <= 0)
++        {
++            return default;
++        }
++
++        // The rule is a singleton, so the counter must live in a new visitor for every document.
++        var count = 0;
++
++        var visitor = new MatchingNodeVisitor<GraphQLField>((field, ctx) =>
++        {
++            if (field.Alias == null)
++            {
++                return;
++            }
++
++            count++;
++
++            if (count == maxAliases + 1)
++            {
++                ctx.ReportError(new ValidationError(
++                    $"The query contains more than {maxAliases} aliases, which is not allowed."));
++            }
++        });
++
++        return new ValueTask<INodeVisitor?>(visitor);
++    }
++}
+diff --git a/backend/src/Squidex/Config/Web/WebServices.cs b/backend/src/Squidex/Config/Web/WebServices.cs
+index 748013a9d..85f7b1e9c 100644
+--- a/backend/src/Squidex/Config/Web/WebServices.cs
++++ b/backend/src/Squidex/Config/Web/WebServices.cs
+@@ -136,7 +136,13 @@ public static class WebServices
+     {
+         services.AddGraphQL(builder =>
+         {
+-            builder.UseApolloTracing();
++            // Tracing measures every single field resolution and is therefore not enabled by default.
++            builder.UseApolloTracing(options =>
++                options.RequestServicesOrThrow().GetRequiredService<IOptions<GraphQLOptions>>().Value.EnableTracing);
++
++            // Rejects queries with too many aliases (graphql:maxAliases, 0 = disabled).
++            builder.AddValidationRule<AliasLimitValidationRule>();
++
+             builder.AddSchema<DummySchema>();
+             builder.AddSystemTextJson();
+             builder.AddDataLoader();
